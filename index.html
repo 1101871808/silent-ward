@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="description" content="静默病栋 SILENT WARD — 第一人称心理恐怖剧情游戏">
+<title>静默病栋 · SILENT WARD</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===================== 3D 视口 ===================== -->
+<div id="viewport"></div>
+
+<!-- ===================== 后处理 / 屏幕效果（纯 CSS，几乎零开销） ===================== -->
+<div id="vignette"></div>
+<div id="grain"></div>
+<div id="scanlines"></div>
+<div id="chroma"></div>
+<div id="sanity-edge"></div>
+<div id="blood-flash"></div>
+<div id="light-flash"></div>
+<div id="lowbattery"></div>
+
+<!-- ===================== 游戏 HUD ===================== -->
+<div id="hud" class="hidden">
+  <div id="objective">
+    <div class="obj-label">当前目标</div>
+    <div class="obj-text"></div>
+    <div id="file-counter"></div>
+  </div>
+
+  <div id="chapter-tag"></div>
+  <div id="crosshair"></div>
+
+  <div id="prompt" class="hidden">
+    <span class="key">E</span>
+    <span class="p-text"></span>
+  </div>
+
+  <div id="subtitle" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+
+  <div id="status-bar">
+    <div id="sanity-meter" title="精神状态">
+      <div class="sanity-label">精神</div>
+      <div class="sanity-track"><i></i></div>
+    </div>
+    <div id="flashlight-status">
+      <span class="fl-icon">▮</span>
+      <div class="battery"><i></i></div>
+      <span class="fl-hint">F</span>
+    </div>
+    <div id="stamina-meter"><i></i></div>
+  </div>
+
+  <div id="hide-indicator" class="hidden">躲藏中 · 按 E 离开</div>
+
+  <div id="hint-bar">
+    <span><kbd>WASD</kbd>移动</span>
+    <span><kbd>Shift</kbd>奔跑</span>
+    <span><kbd>C</kbd>蹲下</span>
+    <span><kbd>F</kbd>手电</span>
+    <span><kbd>E</kbd>交互</span>
+    <span><kbd>Tab</kbd>档案</span>
+    <span><kbd>Esc</kbd>暂停</span>
+  </div>
+</div>
+
+<!-- ===================== 档案 / 文档 ===================== -->
+<div id="journal" class="overlay hidden">
+  <div class="journal-wrap">
+    <div class="journal-side">
+      <div class="journal-title">档 案</div>
+      <div class="journal-tabs">
+        <button class="tab active" data-tab="files">病历与文件</button>
+        <button class="tab" data-tab="tapes">录音记录</button>
+        <button class="tab" data-tab="notes">已读笔记</button>
+      </div>
+      <div id="journal-list" class="journal-list"></div>
+      <div class="journal-foot">按 <kbd>Tab</kbd> 或 <kbd>Esc</kbd> 关闭</div>
+    </div>
+    <div class="journal-main">
+      <div id="journal-empty" class="journal-empty">你还没有找到任何东西。<br><span>在病栋里仔细搜寻。</span></div>
+      <div id="journal-doc" class="journal-doc hidden">
+        <div class="doc-head"><span class="doc-type"></span><span class="doc-title"></span></div>
+        <div class="doc-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 单页阅读（纸条） ===================== -->
+<div id="note-overlay" class="overlay hidden">
+  <div class="note-paper">
+    <div class="note-title"></div>
+    <div class="note-body"></div>
+    <div class="note-foot">按 <kbd>E</kbd> / <kbd>Esc</kbd> 放下</div>
+  </div>
+</div>
+
+<!-- ===================== 录音机 ===================== -->
+<div id="tape-overlay" class="overlay hidden">
+  <div class="tape-box">
+    <div class="tape-header">
+      <span class="tape-rec"></span>
+      <span class="tape-name">TAPE RECORDER · 正在回放</span>
+      <span class="tape-time">00:00</span>
+    </div>
+    <div class="tape-wave" id="tape-wave"></div>
+    <div id="tape-lines" class="tape-lines"></div>
+    <div class="tape-foot">按 <kbd>E</kbd> 停止回放</div>
+  </div>
+</div>
+
+<!-- ===================== 密码键盘 ===================== -->
+<div id="keypad-overlay" class="overlay hidden">
+  <div class="keypad">
+    <div class="keypad-head">电子门锁 · 东翼药房</div>
+    <div class="keypad-screen"><span id="keypad-dots">- - - -</span></div>
+    <div class="keypad-grid">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="C" class="k-fn">C</button><button data-k="0">0</button><button data-k="E" class="k-fn k-ok">E</button>
+    </div>
+    <div class="keypad-hint" id="keypad-hint"></div>
+    <div class="keypad-foot">按 <kbd>Esc</kbd> 离开</div>
+  </div>
+</div>
+
+<!-- ===================== 暂停 ===================== -->
+<div id="pause-menu" class="overlay hidden">
+  <div class="pause-box">
+    <div class="pause-title">静 默 病 栋</div>
+    <div class="pause-sub">PAUSED</div>
+    <button class="btn" id="btn-resume">继续游戏</button>
+    <button class="btn" id="btn-settings-pause">设置</button>
+    <button class="btn danger" id="btn-quit">返回主菜单</button>
+    <div class="pause-tip">游戏进度已自动保存到本章检查点</div>
+  </div>
+</div>
+
+<!-- ===================== 设置 ===================== -->
+<div id="settings" class="overlay hidden">
+  <div class="settings-box">
+    <div class="settings-title">设置</div>
+    <div class="settings-grid">
+      <label>鼠标灵敏度 <span class="val" id="v-sens">1.00</span>
+        <input type="range" id="set-sens" min="0.2" max="2.5" step="0.05" value="1">
+      </label>
+      <label>视野 FOV <span class="val" id="v-fov">75</span>
+        <input type="range" id="set-fov" min="60" max="100" step="1" value="75">
+      </label>
+      <label>画面亮度 <span class="val" id="v-brightness">90%</span>
+        <input type="range" id="set-brightness" min="0.5" max="1.5" step="0.01" value="0.9">
+      </label>
+      <label>主音量 <span class="val" id="v-master">80%</span>
+        <input type="range" id="set-master" min="0" max="1" step="0.01" value="0.8">
+      </label>
+      <label>环境音 <span class="val" id="v-ambient">55%</span>
+        <input type="range" id="set-ambient" min="0" max="1" step="0.01" value="0.55">
+      </label>
+      <label>音乐 <span class="val" id="v-music">55%</span>
+        <input type="range" id="set-music" min="0" max="1" step="0.01" value="0.55">
+      </label>
+      <label>音效 <span class="val" id="v-sfx">85%</span>
+        <input type="range" id="set-sfx" min="0" max="1" step="0.01" value="0.85">
+      </label>
+      <label>画质
+        <select id="set-quality">
+          <option value="auto">自动（推荐）</option>
+          <option value="low">低</option>
+          <option value="medium" selected>中</option>
+          <option value="high">高</option>
+        </select>
+      </label>
+      <label>惊吓强度
+        <select id="set-scare">
+          <option value="normal" selected>标准</option>
+          <option value="soft">温和（降低音量与闪烁）</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="set-invert"> 反转 Y 轴</label>
+      <label class="check"><input type="checkbox" id="set-shake" checked> 屏幕晃动</label>
+      <label class="check"><input type="checkbox" id="set-hints" checked> 常驻操作提示</label>
+      <label class="check"><input type="checkbox" id="set-fps"> 显示帧率</label>
+    </div>
+    <div class="settings-btns">
+      <button class="btn" id="btn-settings-back">返回</button>
+      <button class="btn danger" id="btn-settings-default">恢复默认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 章节标题 ===================== -->
+<div id="chapter-card" class="hidden">
+  <div class="chapter-num"></div>
+  <div class="chapter-name"></div>
+  <div class="chapter-line"></div>
+</div>
+
+<!-- ===================== 开场旁白 ===================== -->
+<div id="intro" class="overlay hidden">
+  <div class="intro-text">
+    <p>「仁和医院，东翼三楼。」</p>
+    <p>凌晨 2:37。</p>
+    <p>你叫陈默。你翻过封锁的消防门，来找你的妹妹——林晚。</p>
+    <p>三个月前，她住进这里，接受一场叫「静默疗法」的治疗。<br>三天前，她发来最后一条短信：「哥，别来找我。」<br>之后，再也打不通了。</p>
+    <p class="dim">医院的人说，东翼三楼早在十一年前就因为一场火灾封闭了。</p>
+    <p class="dim">可你明明记得，三天前还在这里见过她。</p>
+    <button class="btn" id="btn-intro-go">进入病栋</button>
+  </div>
+</div>
+
+<!-- ===================== 死亡 ===================== -->
+<div id="death-screen" class="overlay hidden">
+  <div class="death-box">
+    <div class="death-title">它 找 到 你 了</div>
+    <div class="death-sub">你听见自己骨头里传来的、不属于你的呼吸声。</div>
+    <div class="death-tip" id="death-tip"></div>
+    <button class="btn" id="btn-retry">从检查点重来</button>
+    <button class="btn danger" id="btn-death-menu">返回主菜单</button>
+  </div>
+</div>
+
+<!-- ===================== 结局 ===================== -->
+<div id="ending-screen" class="overlay hidden">
+  <div class="ending-inner">
+    <div class="ending-label">结 局</div>
+    <div class="ending-title" id="ending-title"></div>
+    <div class="ending-body" id="ending-body"></div>
+    <div class="ending-stats" id="ending-stats"></div>
+    <button class="btn" id="btn-ending-menu">返回主菜单</button>
+  </div>
+</div>
+
+<!-- ===================== Jump Scare 全屏层 ===================== -->
+<div id="jumpscare" class="hidden">
+  <canvas id="scare-canvas" width="1024" height="1024"></canvas>
+</div>
+
+<!-- ===================== 黑场 / 过场 ===================== -->
+<div id="cinema">
+  <div class="bar top"></div>
+  <div class="bar bottom"></div>
+</div>
+<div id="fade">
+  <div id="fade-tip"></div>
+</div>
+
+<!-- ===================== 加载 ===================== -->
+<div id="loading" class="hidden">
+  <div class="load-inner">
+    <div class="load-spin"></div>
+    <div class="load-tip" id="load-tip"></div>
+  </div>
+</div>
+
+<!-- ===================== 指针锁定提示 ===================== -->
+<div id="lock-hint" class="hidden">
+  <div class="lock-box">
+    <div class="lock-title">点击画面继续</div>
+    <div class="lock-sub">鼠标将被锁定用于第一人称视角</div>
+  </div>
+</div>
+
+<!-- ===================== 电梯楼层选择 ===================== -->
+<div id="floor-menu" class="hidden">
+  <div class="floor-panel">
+    <div class="floor-title">电 梯</div>
+    <div class="floor-sub" id="floor-sub">选择要去的楼层</div>
+    <div class="floor-list" id="floor-list"></div>
+    <div class="floor-foot">Esc 关闭</div>
+  </div>
+</div>
+
+<!-- ===================== 主菜单 ===================== -->
+<div id="boot-screen">
+  <div class="boot-title">静 默 病 栋</div>
+  <div class="boot-sub">S I L E N T &nbsp; W A R D</div>
+  <div class="boot-hint">正在载入病栋……</div>
+  <div class="boot-warn">建议佩戴耳机 · 游戏包含闪烁画面与跳跃惊吓</div>
+</div>
+
+<div id="main-menu" class="hidden">
+  <div class="menu-left">
+    <div class="menu-title">静默病栋</div>
+    <div class="menu-en">SILENT WARD</div>
+    <div class="menu-line"></div>
+    <div class="menu-quote">「有时候，病不是长在身上，<br>是长在记忆里。」</div>
+  </div>
+  <div class="menu-right">
+    <button class="menu-btn" id="menu-start">开始新游戏</button>
+    <button class="menu-btn" id="menu-continue">继续游戏</button>
+    <button class="menu-btn" id="menu-settings">设置</button>
+    <button class="menu-btn" id="menu-about">制作信息</button>
+    <div class="menu-ver"><span id="menu-run-label"></span>ver 1.0 · 单机 · 存档自动保存</div>
+  </div>
+  <div class="menu-footer">本作所有模型、贴图、音乐均为程序化实时生成</div>
+</div>
+
+<!-- ===================== 关于 ===================== -->
+<div id="about" class="overlay hidden">
+  <div class="about-box">
+    <div class="about-title">制作信息</div>
+    <div class="about-body">
+      <p><b>《静默病栋》SILENT WARD</b> — 第一人称心理恐怖剧情游戏。</p>
+      <p>全部 3D 场景由几何体在运行时程序化搭建，贴图与配乐均实时生成，无任何外部素材依赖，可离线运行。</p>
+      <p>自定义剧情：仁和医院东翼，「静默疗法」计划，以及一段被反复擦拭的记忆。</p>
+      <p class="dim">操作：WASD 移动 · 鼠标视角 · Shift 奔跑 · C 蹲下 · F 手电 · E 交互 · Tab 档案 · Esc 暂停</p>
+      <p class="dim">建议：戴耳机，关灯，全屏。游戏含 Jump Scare 与闪烁画面。</p>
+    </div>
+    <button class="btn" id="btn-about-back">返回</button>
+  </div>
+</div>
+
+<!-- ===================== 调试信息 ===================== -->
+<div id="diag" class="hidden"></div>
+<div id="error-overlay" class="hidden"></div>
+
+<!-- ===================== 脚本 ===================== -->
+<script src="lib/three.min.js"></script>
+<script src="js/tex_data.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/props.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/player.js"></script>
+<script src="js/entity.js"></script>
+<script src="js/story_data.js"></script>
+<script src="js/story.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
